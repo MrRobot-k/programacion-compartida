@@ -55,7 +55,7 @@ function CodeEditor() {
   };
   const initializeSocket = () => {
     window.history.replaceState(null, '', `?session=${sessionId}`);
-    socketRef.current = io(import.meta.env.VITE_SOCKET_URL || 'https://programacion-compartida.onrender.com');
+    socketRef.current = io(import.meta.env.VITE_BACKEND_URL || 'https://programacion-compartida.onrender.com');
     socketRef.current.on('connect', () => {
       setIsConnected(true);
       console.log('Conectado al servidor');
