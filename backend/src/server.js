@@ -9,8 +9,9 @@ app.use(cors());
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: "http://localhost:5173",
-    methods: ["GET", "POST"]
+    origin: process.env.FRONTEND_URL || "*",  // ← Cambiar aquí
+    methods: ["GET", "POST"],
+    credentials: true
   }
 });
 
