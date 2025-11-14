@@ -1,0 +1,21 @@
+services:
+  # Backend
+  - type: web
+    name: editor-backend
+    runtime: node
+    rootDir: backend
+    buildCommand: corepack enable && corepack prepare pnpm@latest --activate && pnpm install
+    startCommand: pnpm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: FRONTEND_URL
+        sync: false
+
+  # Frontend
+  - type: web
+    name: editor-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: corepack enable && corepack prepare pnpm@latest --activate && pnpm install && pnpm build
+    staticPublishPath: dist
