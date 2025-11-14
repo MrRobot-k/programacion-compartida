@@ -55,11 +55,16 @@ function CodeEditor() {
   };
   const initializeSocket = () => {
     window.history.replaceState(null, '', `?session=${sessionId}`);
-    socketRef.current = io(import.meta.env.VITE_BACKEND_URL || 'https://programacion-compartida.onrender.com');
-    console.log('Intentando conectar a:', backendUrl);
-    socketRef.current.io(backendUrl, {
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://programacion-compartida.onrender.com';
+    console.log('🔗 Intentando conectar a:', backendUrl);
+    socketRef.current = io(backendUrl, {
       transports: ['websocket', 'polling'],
       timeout: 10000
+    });
+    socketRef.current.on('connect', () => {
+      setIsConnected(true);
+      console.log('✅ Conectado al servidor');
+      socketRef.current.emit('join-session', { sessionId, name: userName });
     });
     socketRef.current.on('load-files', (filesList) => {
       setFiles(filesList);
