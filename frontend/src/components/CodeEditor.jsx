@@ -121,8 +121,12 @@ function CodeEditor() {
     setTimeout(() => setNotification(null), 3000);
   };
   const handleEditorChange = (value) => {
-    if (!activeFile) return;
-    setActiveFile(prev => ({ ...prev, content: value }));
+    if (!activeFile || isRemoteUpdate) return;
+    const updateFile = {...activeFile, content: value};
+    setActiveFile(updateFile);
+    setFiles(prev => prev.map(f => 
+      f.name === activeFile.name ? updateFile : f
+    ));
     socketRef.current.emit('update-file', {
       sessionId,
       fileName: activeFile.name,
