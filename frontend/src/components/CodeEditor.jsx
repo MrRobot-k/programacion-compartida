@@ -56,10 +56,10 @@ function CodeEditor() {
   const initializeSocket = () => {
     window.history.replaceState(null, '', `?session=${sessionId}`);
     socketRef.current = io(import.meta.env.VITE_BACKEND_URL || 'https://programacion-compartida.onrender.com');
-    socketRef.current.on('connect', () => {
-      setIsConnected(true);
-      console.log('Conectado al servidor');
-      socketRef.current.emit('join-session', { sessionId, name: userName });
+    console.log('Intentando conectar a:', backendUrl);
+    socketRef.current.io(backendUrl, {
+      transports: ['websocket', 'polling'],
+      timeout: 10000
     });
     socketRef.current.on('load-files', (filesList) => {
       setFiles(filesList);
@@ -100,6 +100,10 @@ function CodeEditor() {
     socketRef.current.on('disconnect', () => {
       setIsConnected(false);
       console.log('Desconectado del servidor');
+    });
+    socketRef.current.on('connect_error', (error) => {
+      console.error('Error de conexión:', error);
+      setIsConnected(false);
     });
   };
   useEffect(() => {

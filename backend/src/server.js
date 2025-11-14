@@ -2,34 +2,28 @@ const express = require('express');
 const { createServer } = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
-
 const app = express();
 app.use(cors());
-
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.FRONTEND_URL || "*",  // ← Cambiar aquí
+    origin: function (origin, callback) {
+      callback(null, true);
+    }, 
     methods: ["GET", "POST"],
     credentials: true
   }
 });
-
 // Almacén de sesiones con usuarios y sus nombres
 const sessions = new Map(); // sessionId -> { files: Map, users: Map }
-
 io.on('connection', (socket) => {
   console.log('Usuario conectado:', socket.id);
-  
   let currentSession = null;
   let userName = null;
-
   socket.on('join-session', ({ sessionId, name }) => {
     currentSession = sessionId;
     userName = name || 'Anónimo';
-    
     socket.join(sessionId);
-    
     // Inicializar sesión si no existe
     if (!sessions.has(sessionId)) {
       sessions.set(sessionId, {
@@ -43,30 +37,23 @@ io.on('connection', (socket) => {
         users: new Map()
       });
     }
-    
     const session = sessions.get(sessionId);
-    
     // Agregar usuario con su nombre
     session.users.set(socket.id, {
       id: socket.id,
       name: userName,
       color: generateUserColor(socket.id)
     });
-    
     // Enviar lista de archivos al usuario
     const filesList = Array.from(session.files.values());
     socket.emit('load-files', filesList);
-    
     // Enviar lista de usuarios conectados a todos
     const usersList = Array.from(session.users.values());
     io.to(sessionId).emit('users-update', usersList);
-    
     // Notificar que un usuario se unió
     socket.to(sessionId).emit('user-joined', { name: userName });
-    
     console.log(`${userName} (${socket.id}) se unió a la sesión ${sessionId}`);
   });
-
   socket.on('create-file', ({ sessionId, fileName, language }) => {
     const session = sessions.get(sessionId);
     if (session) {
