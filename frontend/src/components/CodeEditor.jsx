@@ -59,14 +59,14 @@ function CodeEditor() {
   const initializeSocket = () => {
     window.history.replaceState(null, '', `?session=${sessionId}`);
     const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://programacion-compartida.onrender.com';
-    console.log('ðŸ”— Intentando conectar a:', backendUrl);
+    console.log('[CONEXION] Intentando conectar a:', backendUrl);
     socketRef.current = io(backendUrl, {
       transports: ['websocket', 'polling'],
       timeout: 10000
     });
     socketRef.current.on('connect', () => {
       setIsConnected(true);
-      console.log('âœ… Conectado al servidor');
+      console.log('[OK] Conectado al servidor');
       socketRef.current.emit('join-session', { sessionId, name: userName });
     });
     socketRef.current.on('load-files', (filesList) => {
@@ -78,7 +78,7 @@ function CodeEditor() {
       setActiveFile(newFile);
     });
     socketRef.current.on('file-updated', ({ fileName, content }) => {
-      console.log('📥 Recibiendo actualización remota:', fileName);
+      console.log('[RECIBIDO] Actualizacion remota:', fileName);
       isRemoteChange.current = true;
       setFiles(prev => prev.map(f =>
         f.name === fileName ? { ...f, content } : f
@@ -117,17 +117,17 @@ function CodeEditor() {
       setUsers(usersList);
     });
     socketRef.current.on('user-joined', ({ name }) => {
-      showNotification(`${name} se uniÃ³ a la sesiÃ³n`, '#28a745');
+      showNotification(`${name} se unio a la sesion`, '#28a745');
     });
     socketRef.current.on('user-left', ({ name }) => {
-      showNotification(`${name} saliÃ³ de la sesiÃ³n`, '#ffc107');
+      showNotification(`${name} salio de la sesion`, '#ffc107');
     });
     socketRef.current.on('disconnect', () => {
       setIsConnected(false);
       console.log('Desconectado del servidor');
     });
     socketRef.current.on('connect_error', (error) => {
-      console.error('Error de conexiÃ³n:', error);
+      console.error('[ERROR] Error de conexion:', error);
       setIsConnected(false);
     });
   };
@@ -141,28 +141,35 @@ function CodeEditor() {
     setTimeout(() => setNotification(null), 3000);
   };
   const handleEditorChange = (value) => {
-    if (!activeFile) return;
+    if (!activeFile || !socketRef.current) return;
+
     // Si es un cambio remoto, no hacer nada (ya se aplicó)
     if (isRemoteChange.current) {
-      console.log('⏭️ Ignorando cambio remoto en onChange');
+      console.log('[SKIP] Ignorando cambio remoto en onChange');
       return;
     }
-    console.log('✏️ Cambio local detectado');
+
+    console.log('[EDIT] Cambio local detectado');
+
     // Actualizar estado local inmediatamente
     setActiveFile(prev => ({ ...prev, content: value }));
     setFiles(prev => prev.map(f =>
       f.name === activeFile.name ? { ...f, content: value } : f
     ));
+
     // Debounce: enviar al servidor después de un breve delay
     if (updateTimeout.current) clearTimeout(updateTimeout.current);
+
     updateTimeout.current = setTimeout(() => {
-      console.log('📤 Enviando actualización al servidor');
-      socketRef.current.emit('update-file', {
-        sessionId,
-        fileName: activeFile.name,
-        content: value
-      });
-    }, 300); // 300ms de debounce
+      if (socketRef.current && socketRef.current.connected) {
+        console.log('[SEND] Enviando actualizacion al servidor');
+        socketRef.current.emit('update-file', {
+          sessionId,
+          fileName: activeFile.name,
+          content: value
+        });
+      }
+    }, 200); // Reducido a 200ms para mejor sincronización
   };
   const handleCreateFile = () => {
     if (!newFileName.trim()) return;
@@ -209,10 +216,10 @@ function CodeEditor() {
   };
   const handleDeleteFile = (fileName) => {
     if (files.length <= 1) {
-      alert('No puedes eliminar el Ãºltimo archivo');
+      alert('No puedes eliminar el ultimo archivo');
       return;
     }
-    if (confirm(`Â¿Eliminar ${fileName}?`)) socketRef.current.emit('delete-file', { sessionId, fileName });
+    if (confirm(`Eliminar ${fileName}?`)) socketRef.current.emit('delete-file', { sessionId, fileName });
   };
   const handleCopyLink = () => {
     navigator.clipboard.writeText(window.location.href);
@@ -279,7 +286,7 @@ function CodeEditor() {
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent'
           }}>
-            âš¡ Editor Colaborativo
+            ⚡ Editor Colaborativo
           </h2>
           <p style={{
             margin: '0 0 25px 0',
@@ -326,7 +333,7 @@ function CodeEditor() {
               cursor: 'pointer',
               boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)'
             }}>
-            Unirse a la sesiÃ³n
+            Unirse a la sesión
           </motion.button>
         </motion.div>
       </div>
@@ -364,7 +371,7 @@ function CodeEditor() {
             fontWeight: '600',
             color: '#cccccc'
           }}>
-            âš¡ Editor Colaborativo
+            ⚡ Editor Colaborativo
           </h2>
           {/* Menu de archivo */}
           <div style={{ display: 'flex', gap: '10px' }}>
@@ -382,7 +389,7 @@ function CodeEditor() {
                 fontWeight: '500',
                 cursor: 'pointer'
               }}>
-              ðŸ“„ Nuevo
+              Nuevo
             </motion.button>
             <motion.button
               whileHover={{ scale: 1.05, backgroundColor: '#094771' }}
@@ -398,7 +405,7 @@ function CodeEditor() {
                 fontWeight: '500',
                 cursor: 'pointer'
               }}>
-              ðŸ“‚ Abrir
+              Abrir
             </motion.button>
             <motion.button
               whileHover={{ scale: 1.05, backgroundColor: '#094771' }}
@@ -415,7 +422,7 @@ function CodeEditor() {
                 fontWeight: '500',
                 cursor: activeFile ? 'pointer' : 'not-allowed'
               }}>
-              ðŸ’¾ Guardar
+              Guardar
             </motion.button>
             <input
               ref={fileInputRef}
@@ -439,7 +446,7 @@ function CodeEditor() {
             alignItems: 'center',
             gap: '8px'
           }}>
-            ðŸ‘¥ {users.length} en lÃ­nea
+            {users.length} usuarios
             {users.length > 0 && (
               <div style={{
                 display: 'flex',
@@ -524,7 +531,7 @@ function CodeEditor() {
               fontWeight: '500',
               cursor: 'pointer'
             }}>
-            ðŸ“‹ Compartir
+            Compartir
           </motion.button>
         </div>
       </motion.div>
@@ -569,7 +576,7 @@ function CodeEditor() {
                   padding: '0',
                   fontSize: '14px'
                 }}>
-                Ã—
+                ×
               </motion.button>
             )}
           </motion.div>
@@ -621,7 +628,7 @@ function CodeEditor() {
                 fontSize: '14px',
                 fontWeight: '500'
               }}>
-              ⚡ Cargando editor...
+              Cargando editor...
             </motion.p>
           </motion.div>
         )}
@@ -775,7 +782,7 @@ function CodeEditor() {
             boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
             zIndex: 1000
           }}>
-          âœ“ Enlace copiado
+          Enlace copiado
         </motion.div>
       )}
       {/* Notificaciones de usuarios */}
