@@ -5,17 +5,10 @@ services:
     env: node
     region: oregon
     plan: free
-    buildCommand: cd server && pnpm install
-    startCommand: cd server && pnpm run dev
+    buildCommand: cd backend && pnpm install
+    startCommand: cd backend && pnpm start
     envVars:
       - key: NODE_ENV
         value: production
-
-  # Frontend - React + Vite
-  - type: web
-    name: editor-colaborativo-frontend
-    env: static
-    region: oregon
-    plan: free
-    buildCommand: cd client && pnpm install && pnpm run build
-    staticPublishPath: client/dist
+      - key: PORT
+        value: 10000
