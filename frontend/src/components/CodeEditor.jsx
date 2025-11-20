@@ -79,26 +79,27 @@ function CodeEditor() {
     });
     socketRef.current.on('file-updated', ({ fileName, content }) => {
       console.log('[RECIBIDO] Actualizacion remota:', fileName);
+
+      // Marcar como cambio remoto ANTES de actualizar
       isRemoteChange.current = true;
+
+      // Actualizar el estado de archivos
       setFiles(prev => prev.map(f =>
         f.name === fileName ? { ...f, content } : f
       ));
 
-      // Si es el archivo activo, actualizar el editor directamente
-      if (activeFile?.name === fileName) {
-        setActiveFile(prev => ({ ...prev, content }));
-        // Actualizar Monaco Editor directamente para evitar conflictos
-        if (editorRef.current) {
-          const currentPosition = editorRef.current.getPosition();
-          editorRef.current.setValue(content);
-          // Restaurar posición del cursor si es posible
-          if (currentPosition) editorRef.current.setPosition(currentPosition);
+      // Actualizar el archivo activo si coincide
+      setActiveFile(prev => {
+        if (prev?.name === fileName) {
+          return { ...prev, content };
         }
-      }
-      // Resetear flag después de un breve delay
+        return prev;
+      });
+
+      // Resetear flag después de que React haya procesado los cambios
       setTimeout(() => {
         isRemoteChange.current = false;
-      }, 100);
+      }, 150);
     });
     socketRef.current.on('file-deleted', (fileName) => {
       setFiles(prev => {
@@ -136,6 +137,21 @@ function CodeEditor() {
       if (socketRef.current) socketRef.current.disconnect();
     };
   }, []);
+
+  // Sincronizar editor cuando llegan cambios remotos
+  useEffect(() => {
+    if (isRemoteChange.current && editorRef.current && activeFile) {
+      const currentValue = editorRef.current.getValue();
+      if (currentValue !== activeFile.content) {
+        const position = editorRef.current.getPosition();
+        editorRef.current.setValue(activeFile.content);
+        if (position) {
+          editorRef.current.setPosition(position);
+        }
+      }
+    }
+  }, [activeFile?.content]);
+
   const showNotification = (message, color) => {
     setNotification({ message, color });
     setTimeout(() => setNotification(null), 3000);
